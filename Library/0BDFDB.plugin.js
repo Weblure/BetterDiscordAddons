@@ -1,6 +1,6 @@
 /**
- * @name BDFDB
- * @author DevilBro
+ * @name BDFDB - Reboot
+ * @author DevilBro / Weblure
  * @authorId 278543574059057154
  * @version 2.5.8
  * @description Required Library for DevilBro's Plugins
@@ -8,8 +8,8 @@
  * @donate https://www.paypal.me/MircoWittrien
  * @patreon https://www.patreon.com/MircoWittrien
  * @website https://mwittrien.github.io/
- * @source https://github.com/mwittrien/BetterDiscordAddons/tree/master/Library/
- * @updateUrl https://mwittrien.github.io/BetterDiscordAddons/Library/0BDFDB.plugin.js
+ * @source https://github.com/weblure/BetterDiscordAddons/tree/master/Library/
+ * @updateUrl https://raw.githubusercontent.com/Weblure/BetterDiscordAddons/master/Library/0BDFDB.plugin.js
  */
 
 module.exports = (_ => {
@@ -1113,7 +1113,7 @@ module.exports = (_ => {
 			let InternalData, libHashes = {}, oldLibHashes = BDFDB.DataUtils.load(BDFDB, "hashes"), libraryCSS;
 			
 			const getBackup = (fileName, path) => {
-				return {backup: fs.existsSync(path) && (fs.readFileSync(path) || "").toString(), hashIsSame: libHashes[fileName] && oldLibHashes[fileName] && libHashes[fileName] == oldLibHashes[fileName]};
+				return libHashes[fileName] && oldLibHashes[fileName] && libHashes[fileName] == oldLibHashes[fileName] && fs.existsSync(path) && (fs.readFileSync(path) || "").toString();
 			};
 			const requestLibraryHashes = tryAgain => {
 				request("https://api.github.com/repos/mwittrien/BetterDiscordAddons/contents/Library/_res/", {headers: {"user-agent": "node.js"}}, (e, r, b) => {
@@ -1122,7 +1122,7 @@ module.exports = (_ => {
 						b = JSON.parse(b);
 						libHashes[cssFileName] = (b.find(n => n && n.name == cssFileName) || {}).sha;
 						libHashes[dataFileName] = (b.find(n => n && n.name == dataFileName) || {}).sha;
-						BDFDB.DataUtils.save(libHashes, BDFDB, "hashes");
+						BDFDB.DataUtils.save(libHashes, BDFDB, "hashes")
 						requestLibraryData(true);
 					}
 					catch (err) {requestLibraryData(true);}
@@ -1132,17 +1132,11 @@ module.exports = (_ => {
 				const parseCSS = css => {
 					libraryCSS = css;
 				
-					const backupObj = getBackup(dataFileName, dataFilePath);
-					if (backupObj.backup && backupObj.hashIsSame) parseData(backupObj.backup);
+					const backupData = getBackup(dataFileName, dataFilePath);
+					if (backupData) parseData(backupData);
 					else request.get(`https://mwittrien.github.io/BetterDiscordAddons/Library/_res/${dataFileName}`, (e, r, b) => {
 						if ((e || !b || r.statusCode != 200) && tryAgain) return BDFDB.TimeUtils.timeout(_ => requestLibraryData(), 10000);
-						if (!e && b && r.statusCode == 200) {
-							if (backupObj.backup && backupObj.backup.replace(/\s/g, "") == b.replace(/\s/g, "")) {
-								libHashes[dataFileName] = oldLibHashes[dataFileName];
-								BDFDB.DataUtils.save(libHashes, BDFDB, "hashes");
-							}
-							parseData(b, true);
-						}
+						if (!e && b && r.statusCode == 200) parseData(b, true);
 						else parseData(fs.existsSync(dataFilePath) && (fs.readFileSync(dataFilePath) || "").toString());
 					});
 				};
@@ -1175,15 +1169,11 @@ module.exports = (_ => {
 					else BdApi.alert("Error", "Could not initiate BDFDB Library Plugin. Check your Internet Connection and make sure GitHub isn't blocked by your Network or try disabling your VPN/Proxy.");
 				};
 				
-				const backupObj = getBackup(cssFileName, cssFilePath);
-				if (backupObj.backup && backupObj.hashIsSame) parseCSS(backupObj.backup);
+				const backupCSS = getBackup(cssFileName, cssFilePath);
+				if (backupCSS) parseCSS(backupCSS);
 				else request.get(`https://mwittrien.github.io/BetterDiscordAddons/Library/_res/${cssFileName}`, (e, r, b) => {
 					if ((e || !b || r.statusCode != 200) && tryAgain) return BDFDB.TimeUtils.timeout(_ => requestLibraryData(), 10000);
 					if (!e && b && r.statusCode == 200) {
-						if (backupObj.backup && backupObj.backup.replace(/\s/g, "") == b.replace(/\s/g, "")) {
-							libHashes[cssFileName] = oldLibHashes[cssFileName];
-							BDFDB.DataUtils.save(libHashes, BDFDB, "hashes");
-						}
 						fs.writeFile(cssFilePath, b, _ => {});
 						parseCSS(b);
 					}
@@ -1195,7 +1185,6 @@ module.exports = (_ => {
 					plugin = plugin == BDFDB && Internal || plugin;
 					if (BDFDB.ObjectUtils.is(plugin)) {
 						if (InternalData.PluginUrlMap && InternalData.PluginUrlMap[plugin.name]) return InternalData.PluginUrlMap[plugin.name];
-						else if (plugin.updateUrl) return plugin.updateUrl;
 						else {
 							let name = InternalData.PluginNameMap && InternalData.PluginNameMap[plugin.name] || plugin.name;
 							return `https://mwittrien.github.io/BetterDiscordAddons/Plugins/${name}/${name}.plugin.js`;
